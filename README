@@ -1,0 +1,53 @@
+
+--------------------------------------------------------------
+  ____   ____  __  __   _____                            _
+ |  _ \ / __ \|  \/  | |_   _|                          | |
+ | |_) | |  | | \  / |   | |  _ __ ___  _ __   ___  _ __| |_
+ |  _ <| |  | | |\/| |   | | | '_ ` _ \| '_ \ / _ \| '__| __|
+ | |_) | |__| | |  | |  _| |_| | | | | | |_) | (_) | |  | |_
+ |____/ \____/|_|  |_| |_____|_| |_| |_| .__/ \___/|_|   \__|
+                                       | |
+                                       |_|
+--------------------------------------------------------------
+                         By Gary Ip
+
+Welcome!
+
+This program provide the user an easy way to transfer data from
+Inventor or Promis-e, to the new ERP system Encompix. The data will
+be cleaned and saved on a csv file, which can be imported via
+the Multi-EBOM Import Utility.
+
+How to import the csv in to Encompix:
+a) Pick an option and generate the csv file.
+a) In Encompix, Go to Inventory -> Custom -> Multi-EBOM Import Utility.
+c) Pick the csv you want to import and click Load/Validate.
+
+
+
+1) Generate mechanical BOM from Inventor drawings
+------------------------------------------------------------------
+
+This action will open an idw assembly drawing, extract the
+part list and save it to Encompix ebom template.
+If possible, it will also loop through all sub assemblies on
+the original part list. Please make sure to save and close
+all Inventor files before using this program.
+
+
+2) Generate electrical BOM from Promis-e report
+------------------------------------------------------------------
+
+This action will loop through all "Bill of Materials - Itemised"
+reports in the current directory, and then convert them into
+Encompix csv template.
+
+
+3) Generate cooperation BOM from MS Access database
+------------------------------------------------------------------
+
+This action will load the BOM from Cooperation Access database
+and then convert them into Encompix csv template.
+
+
+  

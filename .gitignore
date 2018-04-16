@@ -1,0 +1,10 @@
+__pycache__
+_build
+*.ipynb
+*.csv
+*.idea
+*.xlsx
+src/explore
+doc/
+build/
+dist/

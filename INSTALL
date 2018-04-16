@@ -1,0 +1,15 @@
+
+install miniconda
+open Anaconda Prompt
+--------------------------------
+cd C:\code\python\ebom
+conda create -n exe python=3
+activate exe
+pip install pandas pyinstaller pypiwin32 xlrd xlsxwriter
+echo hiddenimports = ['pandas._libs.tslibs.timedeltas'] > %CONDA_PREFIX%\Lib\site-packages\PyInstaller\hooks\hook-pandas.py
+--------------------------------
+
+
+cd C:\code\python\ebom
+activate exe
+pyinstaller --onefile --exclude matplotlib --exclude scipy main.spec

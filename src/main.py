@@ -61,7 +61,6 @@ def add_mech_parser(subs):
             'columns': 2
         }
     )
-
     save_group = mech_parser.add_argument_group(
         'Save',
         gooey_options={
@@ -91,6 +90,7 @@ def add_mech_parser(subs):
         '--close_file',
         metavar='Close',
         default='never',
+        widget='Listbox',
         choices=['never', 'idw', 'iam', 'both'],
         help="Close inventor file when finished"
     )

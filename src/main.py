@@ -11,7 +11,8 @@ import time
     program_name='BOM Import',
     program_description='My Cool GUI Program!',
     default_size=(610, 530),
-    navigation='SIDEBAR'
+    navigation='SIDEBAR',
+    tabbed_groups=True
 )
 def main():
     parser = GooeyParser()
@@ -22,13 +23,16 @@ def main():
 
     arg = parser.parse_args()
 
-    # Correct checkbox values
-    arg.open_model = not arg.open_model
-    arg.recursive = not arg.recursive
+    # correct checkbox values
+    if arg.command == 'mechanical':
+        arg.open_model = not arg.open_model
+        arg.recursive = not arg.recursive
+        arg.output_raw_data = not arg.output_part_list
 
     print(arg)
+
     if arg.command == 'mechanical':
-        bom.mechanical.save_csv_template(arg.partcode, arg.close_file, arg.open_model, arg.recursive)
+        bom.mechanical.main(arg.assembly, arg.close_file, arg.open_model, arg.recursive)
     elif arg.command == 'electrical':
         bom.electrical.save_csv_templates()
     elif arg.command == 'cooperation':
@@ -43,30 +47,102 @@ def add_mech_parser(subs):
         help='generate mechanical bom',
     )
 
-    mech_parser.add_argument(
-        '--partcode',
+    bom_group = mech_parser.add_argument_group(
+        'BOM',
+        gooey_options={
+            'show_border': False,
+            'columns': 1
+        }
+    )
+    option_group = mech_parser.add_argument_group(
+        'Options',
+        gooey_options={
+            'show_border': False,
+            'columns': 2
+        }
+    )
+
+    save_group = mech_parser.add_argument_group(
+        'Save',
+        gooey_options={
+            'show_border': False,
+            'columns': 2
+        }
+    )
+
+    bom_group.add_argument(
+        '-a',
+        '--assembly',
+        metavar='Assembly',
         type=str,
-        help="enter the assembly you wish to import"
+        help="Enter the assembly you wish to import"
     )
 
-    mech_parser.add_argument(
+    option_group.add_argument(
+        '-o',
         '--open_model',
+        metavar='Open Model',
         action="store_false",
-        help="if there's missing desc, open model"
+        help="Fix missing description"
     )
 
-    mech_parser.add_argument(
+    option_group.add_argument(
+        '-c',
         '--close_file',
-        default='none',
-        choices=['none', 'idw', 'iam', 'both'],
-        help="close file when finished"
+        metavar='Close',
+        default='never',
+        choices=['never', 'idw', 'iam', 'both'],
+        help="Close inventor file when finished"
     )
 
-    mech_parser.add_argument(
+    option_group.add_argument(
+        '-r',
         '--recursive',
+        metavar='Recursive',
         action="store_false",
-        help="generate sub assembly BOM"
+        help="Include sub assemblies"
     )
+
+    option_group.add_argument(
+        '-x',
+        '--exclude_same_rev',
+        metavar='Exclude',
+        action="store_false",
+        help="Exclude BOM with same revision"
+    )
+
+    save_group.add_argument(
+        '-p',
+        '--output_part_list',
+        metavar='Part List',
+        action="store_true",
+        help="partcode_raw.csv"
+    )
+
+    save_group.add_argument(
+        '-e',
+        '--output_encompix_csv',
+        metavar='Encompix',
+        action="store_false",
+        help="partcode.csv"
+    )
+
+    save_group.add_argument(
+        '-n',
+        '--output_change_notice',
+        metavar='Change Notice',
+        action="store_false",
+        help="partcode_cn.csv"
+    )
+
+    save_group.add_argument(
+        '-l',
+        '--output_log_file',
+        metavar='Log File',
+        action="store_false",
+        help="partcode_log.csv"
+    )
+
     return subs
 
 
@@ -75,25 +151,75 @@ def add_elec_parser(subs):
         'electrical',
         help='generate mechanical bom',
     )
-    elec_parser.add_argument(
-        'itemized_bom',
+
+    bom_group = elec_parser.add_argument_group(
+        'BOM',
+        gooey_options={
+            'show_border': False,
+            'columns': 1
+        }
+    )
+    option_group = elec_parser.add_argument_group(
+        'Options',
+        gooey_options={
+            'show_border': False,
+            'columns': 2
+        }
+    )
+
+    save_group = elec_parser.add_argument_group(
+        'Save',
+        gooey_options={
+            'show_border': False,
+            'columns': 2
+        }
+    )
+
+    bom_group.add_argument(
+        'assembly',
+        metavar='Assembly',
         widget="FileChooser",
-        help="open promise report"
+        help="Choose the promise report you wish to import"
     )
-    elec_parser.add_argument(
-        '--raw',
-        action="store_true",
-        help="output raw data"
+
+    option_group.add_argument(
+        '-x',
+        '--exclude_same_rev',
+        metavar='Exclude',
+        action="store_false",
+        help="Exclude BOM with same revision"
     )
-    elec_parser.add_argument(
-        '--current_bom',
+
+    save_group.add_argument(
+        '-p',
+        '--output_part_list',
+        metavar='Part List',
         action="store_true",
-        help="generate current bom only"
+        help="partcode_raw.csv"
     )
-    elec_parser.add_argument(
-        '--close',
-        action="store_true",
-        help="close drawing when finished"
+
+    save_group.add_argument(
+        '-e',
+        '--output_encompix_csv',
+        metavar='Encompix',
+        action="store_false",
+        help="partcode.csv"
+    )
+
+    save_group.add_argument(
+        '-n',
+        '--output_change_notice',
+        metavar='Change Notice',
+        action="store_false",
+        help="partcode_cn.csv"
+    )
+
+    save_group.add_argument(
+        '-l',
+        '--output_log_file',
+        metavar='Log File',
+        action="store_false",
+        help="partcode_log.csv"
     )
     return subs
 
@@ -103,25 +229,84 @@ def add_coop_parser(subs):
         'cooperation',
         help='generate mechanical bom',
     )
-    coop_parser.add_argument(
-        'assembly',
+
+    bom_group = coop_parser.add_argument_group(
+        'BOM',
+        gooey_options={
+            'show_border': False,
+            'columns': 1
+        }
+    )
+    option_group = coop_parser.add_argument_group(
+        'Options',
+        gooey_options={
+            'show_border': False,
+            'columns': 2
+        }
+    )
+
+    save_group = coop_parser.add_argument_group(
+        'Save',
+        gooey_options={
+            'show_border': False,
+            'columns': 2
+        }
+    )
+
+    bom_group.add_argument(
+        '-a',
+        '--assembly',
+        metavar='Assembly',
         type=str,
-        help="enter the partcode you wish to import"
+        help="Enter the assembly you wish to import"
     )
-    coop_parser.add_argument(
-        '--raw',
-        action="store_true",
-        help="output raw data"
-    )
-    coop_parser.add_argument(
-        '--current_bom',
-        action="store_true",
-        help="generate current bom only"
-    )
-    coop_parser.add_argument(
-        '--close',
+
+    option_group.add_argument(
+        '-r',
+        '--recursive',
+        metavar='Recursive',
         action="store_false",
-        help="close drawing when finished"
+        help="Include sub assemblies"
+    )
+
+    option_group.add_argument(
+        '-x',
+        '--exclude_same_rev',
+        metavar='Exclude',
+        action="store_false",
+        help="Exclude BOM with same revision"
+    )
+
+    save_group.add_argument(
+        '-p',
+        '--output_part_list',
+        metavar='Part List',
+        action="store_true",
+        help="partcode_raw.csv"
+    )
+
+    save_group.add_argument(
+        '-e',
+        '--output_encompix_csv',
+        metavar='Encompix',
+        action="store_false",
+        help="partcode.csv"
+    )
+
+    save_group.add_argument(
+        '-n',
+        '--output_change_notice',
+        metavar='Change Notice',
+        action="store_false",
+        help="partcode_cn.csv"
+    )
+
+    save_group.add_argument(
+        '-l',
+        '--output_log_file',
+        metavar='Log File',
+        action="store_false",
+        help="partcode_log.csv"
     )
     return subs
 

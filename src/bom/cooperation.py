@@ -89,11 +89,11 @@ def _is_manu(row):
     return 'B'
 
 
-def save_csv_template(partcode):
+def save_csv_template(assembly):
     """Return X Pandas DataFrame"""
     logger = logging.getLogger(__name__)
     logger.info('converting ebom table...')
-    df = load_cooperation_ebom(partcode)
+    df = load_cooperation_ebom(assembly)
     st = load_cooperation_stock()
     st = st.rename(columns={'desc1': 'Parent Item Description'})
 
@@ -201,7 +201,7 @@ def save_csv_template(partcode):
     ]]
 
     rs.to_csv(
-        partcode + '.csv',
+        assembly + '.csv',
         index=False,
         # encoding='iso-8859-1',
         quoting=csv.QUOTE_NONNUMERIC

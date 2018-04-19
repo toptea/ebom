@@ -5,6 +5,7 @@ Operating System Methods
 from pathlib import Path
 from glob import glob
 
+import textwrap
 import subprocess
 import time
 import os
@@ -13,13 +14,23 @@ import os
 def find_vault_path():
     username = os.getlogin().upper()
     for drive in 'CDEFGHIJKLMNOPQRSTUVWXYZ':
-        path = Path(drive + ':/BC-Workspace/' + username + '/M-Balmoral,D-AGR/Projects')
-        if os.path.exists(str(path)):
-            return path
-    for drive in 'CDEFGHIJKLMNOPQRSTUVWXYZ':
-        path = Path(drive + ':/BC-Workspace/' + username + '/M-Bally-01,D-AGR/Projects')
-        if os.path.exists(str(path)):
-            return path
+        arbroath_path = Path(drive + ':/BC-Workspace/' + username + '/M-Balmoral,D-AGR/Projects')
+        if os.path.exists(str(arbroath_path)):
+            return arbroath_path
+        ireland_path = Path(drive + ':/BC-Workspace/' + username + '/M-Bally-01,D-AGR/Projects')
+        if os.path.exists(str(ireland_path)):
+            return ireland_path
+    else:
+        err = textwrap.dedent(
+            """
+            Unable to find Meridian Vault path location.
+            -------------------------------------------------------------------
+            Please make sure the path matches the following pattern:
+            1) [drive]:/BC-Workspace/[username]/M-Balmoral,D-AGR/Projects
+            2) [drive]:/BC-Workspace/[username]/M-Bally-01,D-AGR/Projects
+            """
+        )
+        raise FileNotFoundError(err)
 
 
 def find_inventor_path():
@@ -27,6 +38,16 @@ def find_inventor_path():
         path = Path(drive + ':/Program Files/Autodesk/Inventor 2016/Bin/Inventor.exe')
         if os.path.exists(str(path)):
             return path
+    else:
+        err = textwrap.dedent(
+            """
+            Unable to find Autodesk Inventor path location.
+            -------------------------------------------------------------------
+            Please make sure the path matches the following pattern:
+            1) [drive]:/Program Files/Autodesk/Inventor 2016/Bin/Inventor.exe
+            """
+        )
+        raise FileNotFoundError(err)
 
 
 def find_export_path():
@@ -56,14 +77,18 @@ def find_path(partcode, filetype):
     file = partcode + '.' + filetype
     paths = glob(str(find_vault_path() / client / project / section / file))
 
-    # if len(paths) == 0:
-    #     paths = glob(str(INVENTOR_DIR / '**' / file), recursive=True)
     if len(paths) == 0:
-        pass
-        # print('Unable to find ' + partcode)
+        err = textwrap.dedent(
+            """
+            Unable to find '{}' path location.
+            -------------------------------------------------------------------
+            Please make sure the file are synced in Meridian and check for any typos.
+            """
+        ).format(partcode)
+        raise FileNotFoundError(err)
     if len(paths) > 1:
-        print('Warning - multiple files found. Use first path in list')
-    if len(paths) > 0:
+        print("Warning - There's multiple paths. Use first path in list")
+    if len(paths) == 1:
         return Path(paths[0])
 
 

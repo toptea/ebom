@@ -7,6 +7,7 @@ from utils.system import find_export_path, start_inventor
 import win32com.client
 import numpy as np
 import pandas as pd
+import textwrap
 
 
 def application(silent=True, visible=True):
@@ -115,14 +116,17 @@ class Document:
             document_type = document_type_enum[app.ActiveDocumentType]
             doc = win32com.client.CastTo(app.ActiveDocument, document_type)
             return doc
-        except:
-            print('unable to load file')
-            return None
+        except IOError as e:
+            print(e + 'Unable to load Inventor document')
 
     @classmethod
     def via_active_document(cls, app, export_dir=find_export_path()):
-        path = Path(app.ActiveDocument.FullFileName)
-        return cls(path, app, export_dir)
+        try:
+            path = Path(app.ActiveDocument.FullFileName)
+            return cls(path, app, export_dir)
+        except AttributeError:
+            err = 'The document is not active in Inventor'
+            raise IOError(err)
 
     def get_iproperties_data(self):
         i = self.doc.PropertySets.Item("Inventor User Defined Properties")
@@ -218,7 +222,18 @@ class Drawing(Document):
         df['Assembly'] = self.get_iproperties_data()['partcode']
         df['Assembly_Name'] = self.get_iproperties_data()['desc']
         df['LVL'] = lvl
-        df = df[['Assembly', 'Assembly_Name', 'LVL', 'ITEM', 'QTY', 'Dwg_No', 'Component']]
+        try:
+            df = df[['Assembly', 'Assembly_Name', 'LVL', 'ITEM', 'QTY', 'Dwg_No', 'Component']]
+        except KeyError:
+            err = textwrap.dedent(
+                """
+                Unable to extract part list.
+                ---------------------------------------------------------------
+                Make sure the assembly drawing have a part list.
+                Part list should also have 'ITEM', 'QTY', 'Dwg_No' and 'Component' columns.
+                """
+            )
+            raise IOError(err)
         return df
 
     @staticmethod

@@ -4,55 +4,75 @@ from utils import inventor
 import csv
 
 
-def append_sub_assy_part_list(df, app, auto_close):
+def append_sub_assy_part_list(df, app, open_model, close_file):
     lvl = 2
     while True:
-        assembly_paths = _find_assembly_drawing_paths(df)
-        if len(assembly_paths) == 0:
+        partcodes = df.loc[~df['Dwg_No'].isin(df['Assembly']), 'Dwg_No'].values
+        iam_paths = system.find_paths(partcodes, 'iam')
+        idw_paths = system.find_paths([path.stem for path in iam_paths], 'idw')
+
+        if len(idw_paths) == 0:
             break
         
-        for assembly_path in assembly_paths:
-            doc = inventor.Drawing(assembly_path, app)
-            rs = doc.extract_part_list(lvl=lvl, auto_close=auto_close)
+        for idw_path, iam_path in zip(idw_paths, iam_paths):
+            idw = inventor.Drawing(idw_path, app)
+            rs = idw.extract_part_list(lvl)
+
+            if open_model and '' in df['Component'].unique():
+                iam = inventor.Drawing(iam_path, app)
+                idw = inventor.Drawing(idw_path, app)
+                rs = idw.extract_part_list(lvl)
+            else:
+                iam = None
+            if close_file == 'idw' or close_file == 'both':
+                idw.close()
+            if (close_file == 'iam' or close_file == 'both') and iam is not None:
+                iam.close()
             df = df.append(rs)
         lvl += 1
     
     return df
 
 
-def _find_assembly_drawing_paths(df):
-    partcodes = df.loc[~df['Dwg_No'].isin(df['Assembly']),'Dwg_No']
-    partcodes = partcodes.values
-    iam_paths = system.find_paths(partcodes, 'iam')
-    iam_partcodes = [path.stem for path in iam_paths]
-    idw_paths = system.find_paths(iam_partcodes, 'idw')
-    return idw_paths
+def load_part_list(app, partcode, open_model, close_file, recursive):
 
+    idw_path = system.find_path(partcode, 'idw')
+    idw = inventor.Drawing(idw_path, app)
+    df = idw.extract_part_list(lvl=1)
 
-def load_part_list(partcode):
-    path = system.find_path(partcode, 'idw')
-    print(path)
-    app = inventor.application()
-    doc = inventor.Drawing(path, app)
+    if open_model and '' in df['Component'].unique():
+        iam_path = system.find_path(partcode, 'iam')
+        iam = inventor.Drawing(iam_path, app)
+        idw = inventor.Drawing(idw_path, app)
+        df = idw.extract_part_list(lvl=1)
+    else:
+        iam = None
+    if close_file == 'idw' or close_file == 'both':
+        idw.close()
+    if (close_file == 'iam' or close_file == 'both') and iam is not None:
+        iam.close()
+    if recursive:
+        df = append_sub_assy_part_list(df, app, open_model, close_file)
 
-    auto_close = partcode[7:] == '-000-00'
-    df = doc.extract_part_list(lvl=1, auto_close=auto_close)
-    df = append_sub_assy_part_list(df, app, auto_close)
     return df
 
 
 def _is_manu(row):
     """Check whether an item is a manufacture of purchase part"""
-
-    if len(row) >= 3:
-        if all([row[i] not in '1234567890' for i in range(3)]):
-            return 'M'
-
-    return 'B'
+    if len(row) >= 3 and all([row[i] not in '1234567890' for i in range(3)]):
+        return 'M'
+    else:
+        return 'B'
 
 
-def save_csv_template(partcode):
-    df = load_part_list(partcode)
+def save_csv_template(partcode, close_file, open_model=True, recursive=True):
+    app = inventor.application()
+    if partcode is None:
+        idw = inventor.Drawing.via_active_document(app)
+        iprop = idw.doc.PropertySets.Item("Inventor User Defined Properties")
+        partcode = str(iprop.Item('Dwg_No')).strip()
+
+    df = load_part_list(app, partcode, open_model, close_file, recursive)
     rs = pd.DataFrame()
     rs['temp'] = df['Assembly']
     rs['Import?'] = 'YES'
@@ -112,3 +132,7 @@ def save_csv_template(partcode):
         # encoding='iso-8859-1',
         quoting=csv.QUOTE_NONNUMERIC
     )
+
+
+if __name__ == '__main__':
+    pass

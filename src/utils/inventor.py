@@ -2,6 +2,7 @@
 Inventor COM API
 """
 
+from pathlib import Path
 from utils.system import find_export_path, start_inventor
 import win32com.client
 import numpy as np
@@ -71,7 +72,6 @@ class Document:
         self.doc = self._load_document(path, app)
         self.export_dir = export_dir
         self.path = path
-        print(self.partcode)
 
     @property
     def partcode(self):
@@ -118,6 +118,11 @@ class Document:
         except:
             print('unable to load file')
             return None
+
+    @classmethod
+    def via_active_document(cls, app, export_dir=find_export_path()):
+        path = Path(app.ActiveDocument.FullFileName)
+        return cls(path, app, export_dir)
 
     def get_iproperties_data(self):
         i = self.doc.PropertySets.Item("Inventor User Defined Properties")
@@ -199,7 +204,7 @@ class Drawing(Document):
         }
         return drawing_sheet_size_enum[self.doc.Sheets(1).Size]
 
-    def extract_part_list(self, lvl=1, auto_close=False):
+    def extract_part_list(self, lvl=1):
         df = pd.DataFrame()
 
         sheets = self.doc.Sheets
@@ -209,9 +214,6 @@ class Drawing(Document):
             for n in range(1, partlists.Count + 1):
                 rs = self._extract(partlists(n))
                 df = df.append(rs)
-
-        if auto_close:
-            self.doc.close()
 
         df['Assembly'] = self.get_iproperties_data()['partcode']
         df['Assembly_Name'] = self.get_iproperties_data()['desc']

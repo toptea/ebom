@@ -12,4 +12,4 @@ echo hiddenimports = ['pandas._libs.tslibs.timedeltas'] > %CONDA_PREFIX%\Lib\sit
 
 cd C:\code\python\ebom
 activate exe
-pyinstaller --onefile --exclude matplotlib --exclude scipy main.spec
+pyinstaller --onefile --exclude matplotlib --exclude scipy build.spec

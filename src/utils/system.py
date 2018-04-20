@@ -21,6 +21,13 @@ def find_vault_path():
         if os.path.exists(str(ireland_path)):
             return ireland_path
     else:
+        return Path('C:/')
+
+
+def check_vault_path(path):
+    if os.path.exists(str(path)):
+        return True
+    else:
         err = textwrap.dedent(
             """
             Unable to find Meridian Vault path location.
@@ -39,6 +46,13 @@ def find_inventor_path():
         if os.path.exists(str(path)):
             return path
     else:
+        return Path('C:/')
+
+
+def check_inventor_path(path):
+    if os.path.exists(str(path)):
+        return path
+    else:
         err = textwrap.dedent(
             """
             Unable to find Autodesk Inventor path location.
@@ -51,12 +65,17 @@ def find_inventor_path():
 
 
 def find_export_path():
-    username = os.getlogin().upper()
-    path = Path('C:/Users/' + username + '/Desktop/CAD/')
-    return path
+    return Path(os.getcwd())
+
+    # username = os.getlogin().upper()
+    # path = Path('C:/Users/' + username + '/Desktop/')
+    # if os.path.exists(str(path)):
+    #    return path
+    # else:
+    #    return Path(os.getcwd())
 
 
-def find_path(partcode, filetype):
+def find_path(partcode, filetype, is_sub_assembly=False):
     """find Inventor file path
 
     Parameters
@@ -77,7 +96,7 @@ def find_path(partcode, filetype):
     file = partcode + '.' + filetype
     paths = glob(str(find_vault_path() / client / project / section / file))
 
-    if len(paths) == 0:
+    if len(paths) == 0 and not is_sub_assembly:
         err = textwrap.dedent(
             """
             Unable to find '{}' path location.
@@ -109,7 +128,7 @@ def find_paths(partcodes, filetype):
     """
     paths = []
     for partcode in partcodes:
-        path = find_path(partcode, filetype)
+        path = find_path(partcode, filetype, is_sub_assembly=True)
         if path is not None:
             paths.append(path)
     return paths

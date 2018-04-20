@@ -125,7 +125,7 @@ class Document:
             path = Path(app.ActiveDocument.FullFileName)
             return cls(path, app, export_dir)
         except AttributeError:
-            err = 'The document is not active in Inventor'
+            err = 'The file is not active in Inventor'
             raise IOError(err)
 
     def get_iproperties_data(self):
@@ -224,6 +224,8 @@ class Drawing(Document):
         df['LVL'] = lvl
         try:
             df = df[['Assembly', 'Assembly_Name', 'LVL', 'ITEM', 'QTY', 'Dwg_No', 'Component']]
+            df['Assembly_Name'] = df['Assembly_Name'].str.strip()
+            df['Component'] = df['Component'].str.strip()
         except KeyError:
             err = textwrap.dedent(
                 """

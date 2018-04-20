@@ -6,29 +6,37 @@ import csv
 
 def _is_manu(row):
     """Check whether the part number is a manufacture of purchase part"""
-    if len(row) >= 3 and all([row[i] not in '1234567890' for i in range(3)]):
-        return 'M'
+    if len(row) >= 3:
+        if all([row[i] not in '1234567890' for i in range(3)]):
+            return 'M'
     else:
         return 'B'
 
 
 def load_part_list(app, assembly, open_model, close_file, recursive):
-
+    print('\n' + assembly)
+    print('|_ opening idw')
     idw_path = system.find_path(assembly, 'idw')
     idw = inventor.Drawing(idw_path, app)
+
     df = idw.extract_part_list(lvl=1)
 
     if open_model and '' in df['Component'].unique():
+        print('|_ opening iam')
         iam_path = system.find_path(assembly, 'iam')
         iam = inventor.Drawing(iam_path, app)
         idw = inventor.Drawing(idw_path, app)
+        print('|_ extracting bom')
         df = idw.extract_part_list(lvl=1)
     else:
+        print('|_ extracting bom')
         iam = None
 
     if close_file == 'idw' or close_file == 'both':
+        print('|_ closing idw')
         idw.close()
     if (close_file == 'iam' or close_file == 'both') and iam is not None:
+        print('|_ closing iam')
         iam.close()
     if recursive:
         df = load_sub_part_list(df, app, open_model, close_file)
@@ -47,20 +55,28 @@ def load_sub_part_list(df, app, open_model, close_file):
             break
 
         for idw_path, iam_path in zip(idw_paths, iam_paths):
+            assembly = idw_path.stem
+            print('\n' + assembly)
+            print('|_ opening idw')
             idw = inventor.Drawing(idw_path, app)
             rs = idw.extract_part_list(lvl)
 
-            if open_model and '' in df['Component'].unique():
+            if open_model and '' in rs['Component'].unique():
+                print('|_ opening iam')
                 iam = inventor.Drawing(iam_path, app)
                 idw = inventor.Drawing(idw_path, app)
+                print('|_ extracting bom')
                 rs = idw.extract_part_list(lvl)
             else:
+                print('|_ extracting bom')
                 iam = None
             if close_file == 'idw' or close_file == 'both':
+                print('|_ closing idw')
                 idw.close()
             if (close_file == 'iam' or close_file == 'both') and iam is not None:
+                print('|_ closing iam')
                 iam.close()
-            df = df.append(rs)
+            df = df.append(rs, ignore_index=True)
         lvl += 1
 
     return df
@@ -121,27 +137,46 @@ def save_encompix_csv(df, assembly):
     del rs['temp']
 
     rs.to_csv(
-        assembly + '.csv',
+        assembly + '_import.csv',
         index=False,
         quoting=csv.QUOTE_NONNUMERIC
     )
 
 
-def save_raw_data(df, assembly):
+def save_part_list(df, assembly):
     df.to_csv(
-        assembly + '_raw.csv',
+        assembly + '_parts_list.csv',
         index=False,
         quoting=csv.QUOTE_NONNUMERIC
     )
 
 
-def main(assembly, close_file, open_model=True, recursive=True):
+def main(assembly, close_file, open_model=True, recursive=True,
+         output_part_list=False, output_encompix=True):
+
+    print('\nInput Parameters')
+    print('|_ command = mechanical')
+    print('|_ assembly =', assembly)
+    print('|_ close_file =', close_file)
+    print('|_ open_model =', open_model)
+    print('|_ recursive =', recursive)
+    print('|_ output_part_list =', output_part_list)
+    print('|_ output_encompix =', output_encompix)
+
+    # system.check_inventor_path(path)
+    # system.check_vault_path(path)
+
     app = inventor.application()
     if assembly is None:
         idw = inventor.Drawing.via_active_document(app)
-        iprop = idw.doc.PropertySets.Item("Inventor User Defined Properties")
+        iprop = idw.doc.PropertySets.Item('Inventor User Defined Properties')
         assembly = str(iprop.Item('Dwg_No')).strip()
 
     df = load_part_list(app, assembly, open_model, close_file, recursive)
-    save_encompix_csv(df, assembly)
-
+    print('\nOutput')
+    if output_part_list:
+        print('|_ saving part list')
+        save_part_list(df, assembly)
+    if output_encompix:
+        print('|_ saving encompix template')
+        save_encompix_csv(df, assembly)

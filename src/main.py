@@ -1,15 +1,17 @@
 import bom.mechanical
 import bom.electrical
 import bom.cooperation
-import argparse
+from utils import system
+
 from gooey import Gooey, GooeyParser
+import argparse
 import sys
 import time
 
 
 @Gooey(
     program_name='BOM Import',
-    program_description='My Cool GUI Program!',
+    program_description='Version 0.3',
     default_size=(610, 530),
     navigation='SIDEBAR',
     tabbed_groups=True
@@ -23,16 +25,21 @@ def main():
 
     arg = parser.parse_args()
 
-    # correct checkbox values
     if arg.command == 'mechanical':
         arg.open_model = not arg.open_model
         arg.recursive = not arg.recursive
-        arg.output_raw_data = not arg.output_part_list
-
-    print(arg)
+        arg.output_part_list = not arg.output_part_list
+        arg.output_encompix = not arg.output_encompix
 
     if arg.command == 'mechanical':
-        bom.mechanical.main(arg.assembly, arg.close_file, arg.open_model, arg.recursive)
+        bom.mechanical.main(
+            assembly=arg.assembly,
+            close_file=arg.close_file,
+            open_model=arg.open_model,
+            recursive=arg.recursive,
+            output_part_list=arg.output_part_list,
+            output_encompix=arg.output_encompix
+        )
     elif arg.command == 'electrical':
         bom.electrical.save_csv_templates()
     elif arg.command == 'cooperation':
@@ -54,13 +61,23 @@ def add_mech_parser(subs):
             'columns': 1
         }
     )
+
     option_group = mech_parser.add_argument_group(
-        'Options',
+        'Option',
         gooey_options={
             'show_border': False,
             'columns': 2
         }
     )
+
+    path_group = mech_parser.add_argument_group(
+        'Location',
+        gooey_options={
+            'show_border': False,
+            'columns': 1
+        }
+    )
+
     save_group = mech_parser.add_argument_group(
         'Save',
         gooey_options={
@@ -69,12 +86,14 @@ def add_mech_parser(subs):
         }
     )
 
+    help_text_1 = "Enter the assembly number you wish to import.\n"
+    help_text_2 = "If left blank, use the active drawing instead."
     bom_group.add_argument(
         '-a',
         '--assembly',
         metavar='Assembly',
         type=str,
-        help="Enter the assembly you wish to import"
+        help=help_text_1 + help_text_2
     )
 
     option_group.add_argument(
@@ -90,9 +109,8 @@ def add_mech_parser(subs):
         '--close_file',
         metavar='Close',
         default='never',
-        widget='Listbox',
         choices=['never', 'idw', 'iam', 'both'],
-        help="Close inventor file when finished"
+        help="Close file without saving"
     )
 
     option_group.add_argument(
@@ -104,42 +122,85 @@ def add_mech_parser(subs):
     )
 
     option_group.add_argument(
+        '-u',
+        '--update_rev',
+        metavar='Update (WIP)',
+        action="store_false",
+        help="Update BOM revision"
+    )
+
+    option_group.add_argument(
         '-x',
         '--exclude_same_rev',
-        metavar='Exclude',
+        metavar='Exclude (WIP)',
         action="store_false",
         help="Exclude BOM with same revision"
+    )
+
+    path_group.add_argument(
+        '-V',
+        '--vault_path',
+        metavar='Meridian Vault (WIP)',
+        default=str(system.find_vault_path()),
+        widget="DirChooser",
+        help="Where all the inventor files are stored"
+    )
+
+    path_group.add_argument(
+        '-I',
+        '--inventor_path',
+        metavar='Autodesk Inventor (WIP)',
+        default=str(system.find_inventor_path()),
+        widget="FileChooser",
+        help="The path location of the CAD program"
+    )
+
+    path_group.add_argument(
+        '-f',
+        '--output_path',
+        metavar='Output (WIP)',
+        default=str(system.find_export_path()),
+        widget="DirChooser",
+        help="Where the results are saved"
     )
 
     save_group.add_argument(
         '-p',
         '--output_part_list',
-        metavar='Part List',
-        action="store_true",
-        help="partcode_raw.csv"
+        metavar='Parts List',
+        action="store_false",
+        help="partcode_parts_list.csv"
     )
 
     save_group.add_argument(
         '-e',
-        '--output_encompix_csv',
+        '--output_encompix',
         metavar='Encompix',
         action="store_false",
-        help="partcode.csv"
+        help="partcode_import.csv"
     )
 
     save_group.add_argument(
         '-n',
         '--output_change_notice',
-        metavar='Change Notice',
-        action="store_false",
-        help="partcode_cn.csv"
+        metavar='Change Notice (WIP)',
+        action="store_true",
+        help="partcode_changes.csv"
+    )
+
+    save_group.add_argument(
+        '-i',
+        '--output_item',
+        metavar='Import1 (WIP)',
+        action="store_true",
+        help="partcode_item.csv"
     )
 
     save_group.add_argument(
         '-l',
         '--output_log_file',
-        metavar='Log File',
-        action="store_false",
+        metavar='Log File (WIP)',
+        action="store_true",
         help="partcode_log.csv"
     )
 
@@ -153,14 +214,14 @@ def add_elec_parser(subs):
     )
 
     bom_group = elec_parser.add_argument_group(
-        'BOM',
+        'BOM (WIP)',
         gooey_options={
             'show_border': False,
             'columns': 1
         }
     )
     option_group = elec_parser.add_argument_group(
-        'Options',
+        'Option (WIP)',
         gooey_options={
             'show_border': False,
             'columns': 2
@@ -168,7 +229,7 @@ def add_elec_parser(subs):
     )
 
     save_group = elec_parser.add_argument_group(
-        'Save',
+        'Save (WIP)',
         gooey_options={
             'show_border': False,
             'columns': 2
@@ -231,14 +292,14 @@ def add_coop_parser(subs):
     )
 
     bom_group = coop_parser.add_argument_group(
-        'BOM',
+        'BOM (WIP)',
         gooey_options={
             'show_border': False,
             'columns': 1
         }
     )
     option_group = coop_parser.add_argument_group(
-        'Options',
+        'Option (WIP)',
         gooey_options={
             'show_border': False,
             'columns': 2
@@ -246,7 +307,7 @@ def add_coop_parser(subs):
     )
 
     save_group = coop_parser.add_argument_group(
-        'Save',
+        'Save (WIP)',
         gooey_options={
             'show_border': False,
             'columns': 2

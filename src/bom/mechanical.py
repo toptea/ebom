@@ -14,29 +14,29 @@ def _is_manu(row):
 
 
 def load_part_list(app, assembly, open_model, close_file, recursive):
-    print('\n' + assembly)
-    print('|_ opening idw')
+    system.status('\n' + assembly)
+    system.status('|_ opening idw')
     idw_path = system.find_path(assembly, 'idw')
     idw = inventor.Drawing(idw_path, app)
 
     df = idw.extract_part_list(lvl=1)
 
     if open_model and '' in df['Component'].unique():
-        print('|_ opening iam')
+        system.status('|_ opening iam')
         iam_path = system.find_path(assembly, 'iam')
         iam = inventor.Drawing(iam_path, app)
         idw = inventor.Drawing(idw_path, app)
-        print('|_ extracting bom')
+        system.status('|_ extracting bom')
         df = idw.extract_part_list(lvl=1)
     else:
-        print('|_ extracting bom')
+        system.status('|_ extracting bom')
         iam = None
 
     if close_file == 'idw' or close_file == 'both':
-        print('|_ closing idw')
+        system.status('|_ closing idw')
         idw.close()
     if (close_file == 'iam' or close_file == 'both') and iam is not None:
-        print('|_ closing iam')
+        system.status('|_ closing iam')
         iam.close()
     if recursive:
         df = load_sub_part_list(df, app, open_model, close_file)
@@ -56,25 +56,25 @@ def load_sub_part_list(df, app, open_model, close_file):
 
         for idw_path, iam_path in zip(idw_paths, iam_paths):
             assembly = idw_path.stem
-            print('\n' + assembly)
-            print('|_ opening idw')
+            system.status('\n' + assembly)
+            system.status('|_ opening idw')
             idw = inventor.Drawing(idw_path, app)
             rs = idw.extract_part_list(lvl)
 
             if open_model and '' in rs['Component'].unique():
-                print('|_ opening iam')
+                system.status('|_ opening iam')
                 iam = inventor.Drawing(iam_path, app)
                 idw = inventor.Drawing(idw_path, app)
-                print('|_ extracting bom')
+                system.status('|_ extracting bom')
                 rs = idw.extract_part_list(lvl)
             else:
-                print('|_ extracting bom')
+                system.status('|_ extracting bom')
                 iam = None
             if close_file == 'idw' or close_file == 'both':
-                print('|_ closing idw')
+                system.status('|_ closing idw')
                 idw.close()
             if (close_file == 'iam' or close_file == 'both') and iam is not None:
-                print('|_ closing iam')
+                system.status('|_ closing iam')
                 iam.close()
             df = df.append(rs, ignore_index=True)
         lvl += 1
@@ -154,14 +154,14 @@ def save_part_list(df, assembly):
 def main(assembly, close_file, open_model=True, recursive=True,
          output_part_list=False, output_encompix=True):
 
-    print('\nInput Parameters')
-    print('|_ command = mechanical')
-    print('|_ assembly =', assembly)
-    print('|_ close_file =', close_file)
-    print('|_ open_model =', open_model)
-    print('|_ recursive =', recursive)
-    print('|_ output_part_list =', output_part_list)
-    print('|_ output_encompix =', output_encompix)
+    system.status('\nInput Parameters')
+    system.status('|_ command = mechanical')
+    system.status('|_ assembly =', assembly)
+    system.status('|_ close_file =', close_file)
+    system.status('|_ open_model =', open_model)
+    system.status('|_ recursive =', recursive)
+    system.status('|_ output_part_list =', output_part_list)
+    system.status('|_ output_encompix =', output_encompix)
 
     # system.check_inventor_path(path)
     # system.check_vault_path(path)
@@ -173,10 +173,10 @@ def main(assembly, close_file, open_model=True, recursive=True,
         assembly = str(iprop.Item('Dwg_No')).strip()
 
     df = load_part_list(app, assembly, open_model, close_file, recursive)
-    print('\nOutput')
+    system.status('\nOutput')
     if output_part_list:
-        print('|_ saving part list')
+        system.status('|_ saving part list')
         save_part_list(df, assembly)
     if output_encompix:
-        print('|_ saving encompix template')
+        system.status('|_ saving encompix template')
         save_encompix_csv(df, assembly)

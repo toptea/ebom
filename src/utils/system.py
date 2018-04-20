@@ -7,6 +7,7 @@ from glob import glob
 
 import textwrap
 import subprocess
+import sys
 import time
 import os
 
@@ -142,3 +143,8 @@ def start_inventor():
     if 'Inventor.exe' not in os.popen("tasklist").read():
         subprocess.Popen(find_inventor_path())
         time.sleep(10)
+
+
+def status(*text):
+    print(*text)
+    sys.stdout.flush()

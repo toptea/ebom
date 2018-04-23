@@ -224,6 +224,8 @@ class Drawing(Document):
         df['LVL'] = lvl
         try:
             df = df[['Assembly', 'Assembly_Name', 'LVL', 'ITEM', 'QTY', 'Dwg_No', 'Component']]
+            df['ITEM'] = df['ITEM'].astype(int)
+            df['QTY'] = df['QTY'].astype(int)
             df['Assembly_Name'] = df['Assembly_Name'].str.strip()
             df['Component'] = df['Component'].str.strip()
         except KeyError:

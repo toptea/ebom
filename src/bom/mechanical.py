@@ -313,14 +313,14 @@ def save_analysis(df, assembly):
 def save_encompix_bom(df, assembly):
     rs = load_encompix_bom(df)
     rs.to_csv(
-        assembly + '_import.csv',
+        assembly + '.csv',
         index=False,
         quoting=csv.QUOTE_NONNUMERIC
     )
 
 
 def main(assembly, close_file, open_model=True, recursive=True,
-         output_part_list=False, output_encompix=True):
+         output_report=False, output_encompix=True):
 
     system.status('\nInput Parameters')
     system.status('|_ command = mechanical')
@@ -328,7 +328,7 @@ def main(assembly, close_file, open_model=True, recursive=True,
     system.status('|_ close_file =', close_file)
     system.status('|_ open_model =', open_model)
     system.status('|_ recursive =', recursive)
-    system.status('|_ output_part_list =', output_part_list)
+    system.status('|_ output_report =', output_report)
     system.status('|_ output_encompix =', output_encompix)
 
     # system.check_inventor_path(path)
@@ -342,7 +342,7 @@ def main(assembly, close_file, open_model=True, recursive=True,
 
     df = load_part_list(app, assembly, open_model, close_file, recursive)
     system.status('\nOutput')
-    if output_part_list:
+    if output_report:
         system.status('|_ saving part list')
         save_analysis(df, assembly)
     if output_encompix:

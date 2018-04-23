@@ -28,7 +28,7 @@ def main():
     if arg.command == 'mechanical':
         arg.open_model = not arg.open_model
         arg.recursive = not arg.recursive
-        arg.output_part_list = not arg.output_part_list
+        arg.output_report = not arg.output_report
         arg.output_encompix = not arg.output_encompix
 
     if arg.command == 'mechanical':
@@ -37,7 +37,7 @@ def main():
             close_file=arg.close_file,
             open_model=arg.open_model,
             recursive=arg.recursive,
-            output_part_list=arg.output_part_list,
+            output_report=arg.output_report,
             output_encompix=arg.output_encompix
         )
     elif arg.command == 'electrical':
@@ -166,10 +166,10 @@ def add_mech_parser(subs):
 
     save_group.add_argument(
         '-p',
-        '--output_part_list',
-        metavar='Parts List',
+        '--output_report',
+        metavar='Summary Report',
         action="store_false",
-        help="partcode_parts_list.csv"
+        help="partcode.xlsx"
     )
 
     save_group.add_argument(
@@ -177,15 +177,7 @@ def add_mech_parser(subs):
         '--output_encompix',
         metavar='Encompix',
         action="store_false",
-        help="partcode_import.csv"
-    )
-
-    save_group.add_argument(
-        '-n',
-        '--output_change_notice',
-        metavar='Change Notice (WIP)',
-        action="store_true",
-        help="partcode_changes.csv"
+        help="partcode.csv"
     )
 
     save_group.add_argument(
@@ -194,14 +186,6 @@ def add_mech_parser(subs):
         metavar='Import1 (WIP)',
         action="store_true",
         help="partcode_item.csv"
-    )
-
-    save_group.add_argument(
-        '-l',
-        '--output_log_file',
-        metavar='Log File (WIP)',
-        action="store_true",
-        help="partcode_log.csv"
     )
 
     return subs

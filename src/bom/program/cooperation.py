@@ -4,6 +4,66 @@ import logging
 import csv
 
 
+def load_bom(assembly, recursive=True):
+    """ Cooperation Bills of Material
+
+    From Microsoft Access database, load the cooperation bom and
+    return the data as a dataframe.
+
+    Parameters
+    ---------------
+    assembly : str
+        The asssembly number you wish to import.
+        If left blank, use the active drawing instead.
+
+    recursive : bool
+        If true, include sub assembly part list as well.
+
+    Returns
+    ----------
+    obj
+        Pandas DataFrame
+
+    """
+    pass
+
+
+def create_indented_bom(bom):
+    """ Indented Bills of Material
+
+    Show the multilevel BOM structure and quantity required for each part.
+
+    Parameters
+    ---------------
+    bom : obj
+        Dataframe from "bom.cooperation.load_bom()" function
+
+    Returns
+    ----------
+    obj
+        Pandas DataFrame
+
+    """
+    pass
+
+
+def create_ebom(bom):
+    """ Encompix Bills of Material
+
+    Parameters
+    ---------------
+    bom : obj
+        Dataframe from "bom.cooperation.load_bom()" function
+
+    Returns
+    ----------
+    obj
+        Pandas DataFrame
+
+    """
+    pass
+
+
 def load_cooperation_ebom(partcode):
     """Engineering BOM"""
     validate1 = len(partcode) < 20

@@ -3,6 +3,61 @@ from glob import glob
 import csv
 
 
+def load_bom(report):
+    """ Promise Itemized BOM
+
+    open promise itemized bom, clean the data and return it as a dataframe
+
+    Parameters
+    ---------------
+    report : str
+        Report path location
+
+    Returns
+    ----------
+    obj
+        Pandas DataFrame
+
+    """
+    pass
+
+
+def create_indented_bom(bom):
+    """ Indented Bills of Material
+
+    Show the multilevel BOM structure and quantity required for each part.
+
+    Parameters
+    ---------------
+    bom : obj
+        Dataframe from "bom.promise.load_bom()" function
+
+    Returns
+    ----------
+    obj
+        Pandas DataFrame
+
+    """
+    pass
+
+
+def create_ebom(bom):
+    """ Encompix Bills of Material
+
+    Parameters
+    ---------------
+    bom : obj
+        Dataframe from "bom.promise.load_bom()" function
+
+    Returns
+    ----------
+    obj
+        Pandas DataFrame
+
+    """
+    pass
+
+
 def load_part_list(path):
     df = pd.read_excel(path, skiprows=5)
     df = df.rename(columns={col: str(col).strip() for col in df.columns})

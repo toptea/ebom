@@ -1,12 +1,51 @@
-import pandas as pd
 from utils import system
 from utils import inventor
-from utils import database
+
+import pandas as pd
 import numpy as np
-import csv
 
 
-def load_part_list(app, assembly, open_model, close_file, recursive):
+def get_active_assembly_partcode():
+    app = inventor.application()
+    idw = inventor.Drawing.via_active_document(app)
+    iprop = idw.doc.PropertySets.Item('Inventor User Defined Properties')
+    assembly = str(iprop.Item('Dwg_No')).strip()
+    return assembly
+
+
+def load_bom(assembly, close_file='never', open_model=True, recursive=True):
+    """ Inventor Parts List
+
+    Using Inventor COM API, open the assembly drawing,
+    extract the parts list and return the data as a dataframe.
+
+    Parameters
+    ---------------
+    assembly : str
+        The asssembly number you wish to import.
+        If left blank, use the active drawing instead.
+
+    close_file : str
+        - 'never' : leave everything open
+        - 'idw': close the drawing when finished
+        - 'iam': close the assembly model when finished
+        - 'both': close everything when finished
+
+    open_model : bool
+        Sometimes the parts list have missing description.
+        Fix this by opening the model as well.
+
+    recursive : bool
+        If true, include sub assembly part list as well.
+
+    Returns
+    ----------
+    obj
+        Pandas DataFrame
+
+    """
+    app = inventor.application()
+
     system.status('\n' + assembly)
     system.status('|_ opening idw')
     idw_path = system.find_path(assembly, 'idw')
@@ -32,12 +71,12 @@ def load_part_list(app, assembly, open_model, close_file, recursive):
         system.status('|_ closing iam')
         iam.close()
     if recursive:
-        df = load_sub_part_list(df, app, open_model, close_file)
+        df = _load_sub_assembly_bom(df, app, open_model, close_file)
 
     return df
 
 
-def load_sub_part_list(df, app, open_model, close_file):
+def _load_sub_assembly_bom(df, app, open_model, close_file):
     lvl = 2
     while True:
         assemblies = df.loc[~df['Dwg_No'].isin(df['Assembly']), 'Dwg_No'].values
@@ -75,13 +114,28 @@ def load_sub_part_list(df, app, open_model, close_file):
     return df
 
 
-def load_quantified_bom(df, is_indented=True):
-    """
+def create_indented_bom(df, indent_format=True):
+    """ Indented Bills of Material
+
+    Show the multilevel BOM structure and quantity required for each part.
+
     Calculate the partial internal refence number for each partcode,
     then for each level, add all the assembly and the partcode irn together.
     Correct the partcode quantity by multiplying it with the assembly quantity.
-    """
 
+    Parameters
+    ---------------
+    df : obj
+        Dataframe from "bom.inventor.load_bom()" function
+    indent_format : bool
+        show bom structure by adding whitespace
+
+    Returns
+    ----------
+    obj
+        Pandas DataFrame
+
+    """
     dfs = {}
     df = _calc_partial_irn(df)
     for lvl in range(max(df['LVL']) + 1):
@@ -113,7 +167,12 @@ def load_quantified_bom(df, is_indented=True):
     rs = rs.sort_values('irn')
     rs = rs.reset_index(drop=True)
 
-    if is_indented:
+    if indent_format:
+
+        def _indent(row, column):
+            if row[column] is not np.nan:
+                return (row['LVL']) * '    ' + row[column]
+
         rs['Dwg_No'] = rs.apply(_indent, column='Dwg_No', axis=1)
         rs['Component'] = rs.apply(_indent, column='Component', axis=1)
 
@@ -150,41 +209,28 @@ def _calc_partial_irn(df):
     return df
 
 
-def _indent(row, column):
-    if row[column] is not np.nan:
-        return (row['LVL']) * '    ' + row[column]
+def create_ebom(df):
+    """ Encompix Bills of Material
 
+    Parameters
+    ---------------
+    df : obj
+        Dataframe from "bom.inventor.load_bom()" function
 
-def load_new_revision_table(df):
-    sql = (
-        """
-        SELECT
-            "item-no" AS 'assembly',
-            "item-desc" AS 'description',
-            MAX("rev") AS 'Rev'
-        FROM
-            pub."i-bom-hdr"
+    Returns
+    ----------
+    obj
+        Pandas DataFrame
 
-        GROUP BY
-            "item-no",
-            "item-desc"
+    """
+    def _is_manu(row):
+        """Check whether the part number is a manufacture of purchase part"""
+        if len(row) >= 3:
+            if all([row[i] not in '1234567890' for i in range(3)]):
+                return 'M'
+        else:
+            return 'B'
 
-        ORDER BY
-            "item-no"
-        """
-    )
-    rs = database.query(sql, database_type='progress')
-
-    df = df[['Assembly', 'Assembly_Name']].drop_duplicates()
-    df = pd.merge(left=df, right=rs, how='left', left_on='Assembly', right_on='assembly')
-    df['Rev'] = df['Rev'].fillna(0)
-    df['Rev'] = df['Rev'].astype(int)
-    df['Rev'] += df['Rev']
-    df = df[['Assembly', 'Assembly_Name', 'Rev']]
-    return df
-
-
-def load_encompix_bom(df):
     rs = pd.DataFrame()
     rs['temp'] = df['Assembly']
     rs['Import?'] = 'YES'
@@ -203,7 +249,7 @@ def load_encompix_bom(df):
     rs['Length'] = ''
     rs['Width'] = ''
     rs['Product Code'] = 'PROJ'
-    rs['Reference'] = ''
+    rs['Reference'] = '1'
     rs['Detail'] = df['ITEM']
     rs.loc[rs['Req Type'] == 'M', 'Drawing'] = rs['Item Number']
     rs.loc[rs['Req Type'] == 'M', 'Sheet'] = 1
@@ -239,112 +285,3 @@ def load_encompix_bom(df):
     del rs['temp']
     return rs
 
-
-def _is_manu(row):
-    """Check whether the part number is a manufacture of purchase part"""
-    if len(row) >= 3:
-        if all([row[i] not in '1234567890' for i in range(3)]):
-            return 'M'
-    else:
-        return 'B'
-
-
-def save_analysis(df, assembly):
-    writer = pd.ExcelWriter(assembly + '.xlsx', engine='xlsxwriter')
-    workbook = writer.book
-    header_format = workbook.add_format({
-        'bold': True,
-        'text_wrap': False,
-        'fg_color': '#DCE6F1',
-        'border': 1
-    })
-
-    df.to_excel(
-        writer,
-        sheet_name='itemized_bom',
-        index=False,
-        header=False,
-        startrow=1
-    )
-
-    worksheet = writer.sheets['itemized_bom']
-    for col_num, value in enumerate(df.columns.values):
-        worksheet.write(0, col_num, value, header_format)
-
-    worksheet.set_column(0, 0, 16)  # Assembly
-    worksheet.set_column(1, 1, 26)  # Assembly_Name
-    worksheet.set_column(5, 5, 16)  # Dwg_No
-    worksheet.set_column(6, 6, 34)  # Component
-
-    qb = load_quantified_bom(df)
-    qb.to_excel(
-        writer,
-        sheet_name='quantified_bom',
-        index=False,
-        header=False,
-        startrow=1,
-    )
-
-    worksheet = writer.sheets['quantified_bom']
-    for col_num, value in enumerate(qb.columns.values):
-        worksheet.write(0, col_num, value, header_format)
-
-    worksheet.set_column(2, 2, 21)  # Dwg_No
-    worksheet.set_column(3, 3, 60)  # Component
-
-    nr = load_new_revision_table(df)
-    nr.to_excel(
-        writer,
-        sheet_name='new_revision',
-        index=False,
-        startrow=1,
-        header=False
-    )
-
-    worksheet = writer.sheets['new_revision']
-    for col_num, value in enumerate(nr.columns.values):
-        worksheet.write(0, col_num, value, header_format)
-
-    worksheet.set_column(0, 0, 16)  # Assembly
-    worksheet.set_column(1, 1, 26)  # Assembly_Name
-    writer.close()
-
-
-def save_encompix_bom(df, assembly):
-    rs = load_encompix_bom(df)
-    rs.to_csv(
-        assembly + '.csv',
-        index=False,
-        quoting=csv.QUOTE_NONNUMERIC
-    )
-
-
-def main(assembly, close_file, open_model=True, recursive=True,
-         output_report=False, output_encompix=True):
-
-    system.status('\nInput Parameters')
-    system.status('|_ command = mechanical')
-    system.status('|_ assembly =', assembly)
-    system.status('|_ close_file =', close_file)
-    system.status('|_ open_model =', open_model)
-    system.status('|_ recursive =', recursive)
-    system.status('|_ output_report =', output_report)
-    system.status('|_ output_encompix =', output_encompix)
-
-    # system.check_inventor_path(path)
-    # system.check_vault_path(path)
-
-    app = inventor.application()
-    if assembly is None:
-        idw = inventor.Drawing.via_active_document(app)
-        iprop = idw.doc.PropertySets.Item('Inventor User Defined Properties')
-        assembly = str(iprop.Item('Dwg_No')).strip()
-
-    df = load_part_list(app, assembly, open_model, close_file, recursive)
-    system.status('\nOutput')
-    if output_report:
-        system.status('|_ saving part list')
-        save_analysis(df, assembly)
-    if output_encompix:
-        system.status('|_ saving encompix template')
-        save_encompix_bom(df, assembly)

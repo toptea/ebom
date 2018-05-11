@@ -53,44 +53,51 @@ def update_parent_revision(ebom, parent_revision):
 
 
 def load_vendor_id():
-    system.status('\nVendor ID')
-    system.status('|_ Connecting to Encompix database')
-    sql = (
-        """
-        SELECT
-            "vendxref"."item-no",
-            "vendxref"."vend-id",
-            "vendxref"."quote-date" AS "last-order"
-        FROM
-            pub."vendxref"
+    try:
+        system.status('\nVendor ID')
+        system.status('|_ Connecting to Encompix database')
+        sql = (
+            """
+            SELECT
+                "vendxref"."item-no",
+                "vendxref"."vend-id",
+                "vendxref"."quote-date" AS "last-order"
+            FROM
+                pub."vendxref"
 
-        UNION
+            UNION
 
-        SELECT
-            "po-line"."item-no",
-            "po-hdr"."vend-id",
-            "po-hdr"."enter-date" AS "last-order"
-        FROM
-            pub."po-line"
-                LEFT JOIN pub."po-hdr"
-                    ON "po-line"."po-no" = "po-hdr"."po-no"
-        """
-    )
+            SELECT
+                "po-line"."item-no",
+                "po-hdr"."vend-id",
+                "po-hdr"."enter-date" AS "last-order"
+            FROM
+                pub."po-line"
+                    LEFT JOIN pub."po-hdr"
+                        ON "po-line"."po-no" = "po-hdr"."po-no"
+            """
+        )
 
-    df = database.query(sql, database_type='progress')
-    system.status('|_ Finding supplier')
-    rs = df.groupby(['item-no'])['last-order'].max().reset_index()
-    rs = pd.merge(left=rs, right=df[['item-no', 'vend-id']], how='left', on='item-no')
-    rs = rs.drop_duplicates(subset='item-no', keep='last')
-    return rs
+        df = database.query(sql, database_type='progress')
+        system.status('|_ Finding supplier')
+        rs = df.groupby(['item-no'])['last-order'].max().reset_index()
+        rs = pd.merge(left=rs, right=df[['item-no', 'vend-id']], how='left', on='item-no')
+        rs = rs.drop_duplicates(subset='item-no', keep='last')
+        return rs
+    except:
+        system.status('|_ WARNING: Database not found!')
+        system.status('|_ WARNING: Unable to get Vendor ID')
+        return None
 
 
 def update_vendor_id(ebom, vendor_id):
-    system.status('|_ Updating vendor ID from database')
-    rs = pd.DataFrame()
-    rs['Item Number'] = ebom['Item Number']
-    rs = pd.merge(left=rs, right=vendor_id, how='left', left_on='Item Number', right_on='item-no')
-    ebom['Vendor ID'] = rs['vend-id']
+
+    if vendor_id is not None:
+        system.status('|_ Updating vendor ID from database')
+        rs = pd.DataFrame()
+        rs['Item Number'] = ebom['Item Number']
+        rs = pd.merge(left=rs, right=vendor_id, how='left', left_on='Item Number', right_on='item-no')
+        ebom['Vendor ID'] = rs['vend-id']
 
     system.status('|_ Updating vendor ID from pre-defined dict')
     vendor_dict = {

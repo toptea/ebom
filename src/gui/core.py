@@ -11,7 +11,7 @@ options = {
     'default_size': (610, 530),
     'navigation': 'SIDEBAR',
     'tabbed_groups': True,
-    'image_dir': 'gui/img',
+    # 'image_dir': 'gui/img',
     'monospace_display': False,
 }
 

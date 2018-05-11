@@ -1,6 +1,15 @@
 
 
 def add_parser(subs):
+    """Electrical BOM Parser
+
+    Use to create UI for exporting electrical BOM.
+
+    Returns
+    -------
+    subs : obj
+        gooey/argparser sub-command
+    """
     elec_parser = subs.add_parser(
         'electrical',
         help='generate mechanical bom',

@@ -54,6 +54,7 @@ def load_bom(assembly, close_file='never', open_model=True, recursive=True):
     df = idw.extract_part_list(lvl=1)
 
     if open_model and '' in df['Component'].unique():
+        idw.close()
         system.status('|_ opening iam')
         iam_path = system.find_path(assembly, 'iam')
         iam = inventor.Drawing(iam_path, app)
@@ -94,6 +95,7 @@ def _load_sub_assembly_bom(df, app, open_model, close_file):
             rs = idw.extract_part_list(lvl)
 
             if open_model and '' in rs['Component'].unique():
+                idw.close()
                 system.status('|_ opening iam')
                 iam = inventor.Drawing(iam_path, app)
                 idw = inventor.Drawing(idw_path, app)

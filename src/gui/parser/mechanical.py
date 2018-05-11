@@ -2,6 +2,15 @@ from utils import system
 
 
 def add_parser(subs):
+    """Electrical BOM Parser
+
+    Use to create UI for exporting electrical BOM.
+
+    Returns
+    -------
+    subs : obj
+        gooey/argparser sub-command
+    """
     parser = subs.add_parser(
         'mechanical',
         help='generate mechanical bom',
@@ -16,6 +25,7 @@ def add_parser(subs):
 
 
 def _add_bom_group(parser):
+    """BOM Group"""
     group = parser.add_argument_group(
         'BOM',
         gooey_options={
@@ -36,6 +46,7 @@ def _add_bom_group(parser):
 
 
 def _add_option_group(parser):
+    """Option Group"""
     group = parser.add_argument_group(
         'Option',
         gooey_options={
@@ -90,6 +101,7 @@ def _add_option_group(parser):
 
 
 def _add_path_group(parser):
+    """Path Location Group"""
     group = parser.add_argument_group(
         'Location',
         gooey_options={
@@ -125,6 +137,7 @@ def _add_path_group(parser):
 
 
 def _add_save_group(parser):
+    """Save Group"""
     group = parser.add_argument_group(
         'Save',
         gooey_options={
@@ -154,5 +167,3 @@ def _add_save_group(parser):
         help="partcode_item.csv"
     )
     return parser
-
-

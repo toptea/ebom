@@ -1,5 +1,7 @@
 """
+----------------
 Inventor COM API
+----------------
 """
 
 from pathlib import Path
@@ -121,6 +123,7 @@ class Document:
 
     @classmethod
     def via_active_document(cls, app, export_dir=find_export_path()):
+        """Initialize class using model/drawing that was already open in Inventor"""
         try:
             path = Path(app.ActiveDocument.FullFileName)
             return cls(path, app, export_dir)
@@ -129,6 +132,7 @@ class Document:
             raise IOError(err)
 
     def get_iproperties_data(self):
+        """return a dictionary of useful iproperties of the model/drawing"""
         i = self.doc.PropertySets.Item("Inventor User Defined Properties")
 
         try:
@@ -251,10 +255,15 @@ class Drawing(Document):
             column_data = []
             for nrow in range(1, rows.Count + 1):
                 try:
-                    cell = str(rows.Item(nrow).Item(ncol)).strip()
+                    if rows.Item(nrow).Visible:
+                        cell = str(rows.Item(nrow).Item(ncol)).strip()
+                    else:
+                        cell = None
                 except:
-                    cell = ''
-                column_data.append(cell)
+                    cell = None
+
+                if cell is not None:
+                    column_data.append(cell)
 
             title = columns(ncol).Title
             data[title] = column_data

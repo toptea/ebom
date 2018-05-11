@@ -1,6 +1,15 @@
 
 
 def add_parser(subs):
+    """Cooperation BOM Parser
+
+    Use to create UI for exporting Cooperation BOM.
+
+    Returns
+    -------
+    subs : obj
+        gooey/argparser sub-command
+    """
     coop_parser = subs.add_parser(
         'cooperation',
         help='generate mechanical bom',

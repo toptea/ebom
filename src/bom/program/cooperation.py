@@ -73,7 +73,7 @@ def load_cooperation_ebom(partcode):
     if validate1 & validate2 & validate3:
         sql = (
             """
-            SELECT
+            SELECT DISTINCT
                 Parent_drawing,
                 item,
                 Drawing_no,

@@ -7,7 +7,7 @@ from gui.parser import mechanical
 
 options = {
     'program_name': 'BOM Import',
-    'program_description': 'Version 0.3',
+    'program_description': 'Version 0.4',
     'default_size': (610, 530),
     'navigation': 'SIDEBAR',
     'tabbed_groups': True,

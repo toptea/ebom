@@ -10,18 +10,43 @@ def load_parent_revision(ebom):
         sql = (
             """
             SELECT
-                "item-no" AS 'Parent',
-                "item-desc" AS 'Parent Item Description',
-                MAX("rev") AS 'Parent Revision'
-            FROM
-                pub."i-bom-hdr"
+                tbl1."item-no" AS 'Parent',
+                tbl1."rev" AS 'Parent Revision',
+                tbl1."post-sta" AS "Post Status"
 
-            GROUP BY
-                "item-no",
-                "item-desc"
+            FROM
+                (
+                -- main table
+                    SELECT
+                        "item-no",
+                        "rev",
+                        "post-sta"
+
+                    FROM
+                        pub."i-bom-hdr" 
+                ) AS tbl1
+
+                INNER JOIN
+
+                (
+                -- max revision table	
+                    SELECT
+                        "item-no",
+                        MAX("rev") AS 'rev'
+
+                    FROM 
+                        pub."i-bom-hdr"
+
+                    GROUP BY
+                        "item-no"
+
+                ) AS tbl2
+
+                ON tbl1."item-no" = tbl2."item-no"
+                AND tbl1."rev" = tbl2."rev"
 
             ORDER BY
-                "item-no"
+                tbl1."item-no"
             """
         )
 
@@ -31,16 +56,80 @@ def load_parent_revision(ebom):
         df = pd.merge(left=df, right=rs, how='left', left_on='Parent', right_on='Parent')
         df['Parent Revision'] = df['Parent Revision'].fillna(0)
         df['Parent Revision'] = df['Parent Revision'].astype(int)
-        df['Parent Revision'] += df['Parent Revision']
-        df = df[['Parent', 'Parent Item Description', 'Parent Revision']]
+        df = _is_bom_changed(ebom, df)
+        df = df[['Parent', 'Parent Item Description', 'Parent Revision', 'Post Status', 'Changed']]
         return df
     except:
         system.status('|_ WARNING: Database not found!')
         system.status('|_ WARNING: Set Parent Revision to 1')
         df = ebom[['Parent', 'Parent Item Description']].drop_duplicates()
         df['Parent Revision'] = 1
-        df = df[['Parent', 'Parent Item Description', 'Parent Revision']]
+        df['Post Status'] = 'Unknown'
+        df['Changed'] = 'Unknown'
+        df = df[['Parent', 'Parent Item Description', 'Parent Revision', 'Post Status', 'Changed']]
         return df
+
+
+def _is_bom_changed(ebom, prev):
+    sql = (
+        """
+        SELECT
+            tbl1."p-item-no" AS 'Parent',
+            tbl1."p-rev" AS 'Parent Revision',
+            tbl1."seq-no",
+            tbl1."item-no" AS 'Item Number',
+            tbl1."item-desc" AS 'Item Description',
+            tbl1."qty-item" AS 'Quantity'
+
+        FROM 
+            pub."i-bom" AS tbl1
+
+            INNER JOIN
+
+            (
+            -- max revision table
+                SELECT
+                    "p-item-no",
+                    MAX("p-rev") AS 'p_rev'
+                FROM 
+                    pub."i-bom"
+
+                GROUP BY
+                    "p-item-no"
+            ) AS tbl2
+
+            ON tbl1."p-item-no" = tbl2."p-item-no"
+            AND tbl1."p-rev" = tbl2."p_rev"
+
+        ORDER BY
+            tbl1."p-item-no",
+            tbl1."seq-no"
+        """
+    )
+
+    rs = database.query(sql, database_type='progress')
+    rs = rs[rs['Parent'].isin(prev['Parent'])]
+
+    change_dict = {}
+    for assembly in prev['Parent'].unique():
+        rs2 = rs[rs['Parent'] == assembly]
+        ebom2 = ebom[ebom['Parent'] == assembly]
+        rs2 = rs2.reset_index()
+        ebom2 = ebom2.reset_index()
+        b1 = all(ebom2['Parent'].isin(rs['Parent']))
+        b2 = all(ebom2['Item Number'].isin(rs2['Item Number']))
+        b3 = all(rs2['Item Number'].isin(ebom2['Item Number']))
+        b4 = sum(ebom2['Quantity'] - rs2['Quantity']) == 0
+        change_dict[assembly] = ~(b1 & b2 & b3 & b4)
+
+    change_df = pd.DataFrame(list(change_dict.items()), columns=['Parent', 'Changed'])
+    prev = pd.merge(left=prev, right=change_df, how='left', on='Parent')
+
+    b1 = prev['Changed'] == True
+    b2 = prev['Post Status'] == 'Some Posted'
+    b3 = prev['Post Status'] == 'All Posted'
+    prev.loc[b1 & (b2 | b3), 'Parent Revision'] += 1
+    return prev
 
 
 def update_parent_revision(ebom, parent_revision):
@@ -111,9 +200,9 @@ def update_vendor_id(ebom, vendor_id):
         'transmission dev': '0522',
         'transdev': '0522',
         'rittal': '0916',
-        'keyence ': '1015',
+        'keyence': '1015',
         'rockwell': '1092',
-        'item ': '1170',
+        'item': '1170',
         'balluff': '1191',
         'omron': '1248',
         'phoenix': '1248',
@@ -137,7 +226,6 @@ def update_vendor_id(ebom, vendor_id):
         'legris transair': '1767',
         'edmund': '1786',
         'renishaw': '1897',
-
         'button cap': '1100',
         'button hd': '1100',
         'button head': '1100',
@@ -180,6 +268,8 @@ def update_vendor_id(ebom, vendor_id):
     return ebom
 
 
-def exlude_same_revision(ebom):
-    pass
-
+def exlude_same_revision(ebom, prev):
+    filter_assy = prev.loc[prev['Changed'] == False, 'Parent']
+    filter_assy = filter_assy.tolist()
+    ebom = ebom[~ebom['Parent'].isin(filter_assy)]
+    return ebom

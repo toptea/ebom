@@ -1,8 +1,7 @@
-# from bom.program import cooperation
 from bom.program import encompix
-from bom.program import inventor
+from bom.program import data
+
 # from bom.program import meridian
-# from bom.program import promise
 
 import pandas as pd
 import csv
@@ -44,50 +43,50 @@ def main(command, assembly, close_file='never', open_model=True,
     output_import : bool
         Save Encompix import file (partcode.csv)
     """
-    if assembly is None:
-        assembly = inventor.get_active_assembly_partcode()
 
     # 1a) Mechanical BOMs
     if command == 'mechanical':
-        bom = inventor.load_bom(
+        app = data.Inventor(
             assembly=assembly,
             close_file=close_file,
             open_model=open_model,
             recursive=recursive
         )
-        ibom = inventor.create_indented_bom(bom)
-        ebom = inventor.create_ebom(bom)
+        bom = app.load_bom()
+        ibom = app.create_indented_bom(bom)
+        ebom = app.create_ebom(bom)
 
+    # -------------------------------------------------------------------------
     # TODO - 1b) Electrical BOMs
     # if command == 'electrical':
-    #     bom = promise.load_bom(
-    #         report=arg.report
-    #     )
-    #     ibom = promise.create_indented_bom(bom)
-    #     ebom = promise.create_ebom(bom)
-
+    #     app = data.Promise()
+    #     bom = app.load_bom()
+    #     ibom = app.create_indented_bom(bom)
+    #     ebom = app.create_ebom(bom)
+    #
     # TODO - 1c) Cooperation BOMs
     # if command == 'cooperation':
-    #     bom = cooperation.load_bom(
-    #         assembly=arg.assembly,
-    #         recursive=arg.recursive
-    #     )
-    #     ibom = cooperation.create_indented_bom(bom)
-    #     ebom = cooperation.create_ebom(bom)
-
+    #     app = data.Cooperation()
+    #     bom = app.load_bom()
+    #     ibom = app.create_indented_bom(bom)
+    #     ebom = app.create_ebom(bom)
+    #
     # TODO - 2) Meridian - Update drawing revision column
     # if command != 'electrical' and arg.update_drawing:
     #     drev = meridian.load_drawing_revision(ebom)
     #     ebom = meridian.update_drawing_revision(ebom, drev)
+    # -------------------------------------------------------------------------
 
     # 3) Encompix - Update parent revision column
     if update_parent_revision:
         prev = encompix.load_parent_revision(ebom)
         ebom = encompix.update_parent_revision(ebom, prev)
 
+    # -------------------------------------------------------------------------
     # TODO - 4) Encompix - Exclude sections with the same revision
     # if arg.exclude_same_revision:
     #     ebom = app.encompix.exlude_same_revision(ebom)
+    # -------------------------------------------------------------------------
 
     # 5) Encompix - Update vendor id column
     if update_vendor_id:
@@ -102,9 +101,11 @@ def main(command, assembly, close_file='never', open_model=True,
     if output_import:
         save_import_file(assembly, ebom)
 
+    # -------------------------------------------------------------------------
     # TODO - 6c) Save Encompix Item csv
     # if arg.output_item:
     #    save_item_file()
+    # -------------------------------------------------------------------------
 
 
 def save_report_file(assembly, bom, indented_bom, ebom, prev):

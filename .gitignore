@@ -9,3 +9,4 @@ doc/
 build/
 dist/
 utils/database.py
+src/utils/database.py

@@ -8,3 +8,4 @@ src/explore
 doc/
 build/
 dist/
+utils/database.py
